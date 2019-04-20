@@ -1,0 +1,10 @@
+---- __set_FAULTMASK Matches (9 in 9 files) ----
+cmsis_armcc.h (E:\work\bootload\stm32f4_bootload\stm32f4xx_bootload\Drivers\CMSIS\Core\Include) line 330 : __STATIC_INLINE void __set_FAULTMASK(uint32_t faultMask)
+cmsis_armcc.h (E:\work\bootload\stm32f4_bootload\stm32f4xx_bootload\Drivers\CMSIS\Include) line 330 : __STATIC_INLINE void __set_FAULTMASK(uint32_t faultMask)
+cmsis_armclang.h (E:\work\bootload\stm32f4_bootload\stm32f4xx_bootload\Drivers\CMSIS\Core\Include) line 542 : __STATIC_FORCEINLINE void __set_FAULTMASK(uint32_t faultMask)
+cmsis_armclang.h (E:\work\bootload\stm32f4_bootload\stm32f4xx_bootload\Drivers\CMSIS\Include) line 542 : __STATIC_FORCEINLINE void __set_FAULTMASK(uint32_t faultMask)
+cmsis_gcc.h (E:\work\bootload\stm32f4_bootload\stm32f4xx_bootload\Drivers\CMSIS\Core\Include) line 557 : __STATIC_FORCEINLINE void __set_FAULTMASK(uint32_t faultMask)
+cmsis_gcc.h (E:\work\bootload\stm32f4_bootload\stm32f4xx_bootload\Drivers\CMSIS\Include) line 557 : __STATIC_FORCEINLINE void __set_FAULTMASK(uint32_t faultMask)
+cmsis_iccarm.h (E:\work\bootload\stm32f4_bootload\stm32f4xx_bootload\Drivers\CMSIS\Core\Include) line 309 :   #define __set_FAULTMASK(VALUE)      (__arm_wsr("FAULTMASK", (VALUE)))
+cmsis_iccarm.h (E:\work\bootload\stm32f4_bootload\stm32f4xx_bootload\Drivers\CMSIS\Include) line 309 :   #define __set_FAULTMASK(VALUE)      (__arm_wsr("FAULTMASK", (VALUE)))
+Reset_MCU in main.c (E:\work\bootload\stm32f4_bootload\stm32f4xx_bootload\Src) :   __set_FAULTMASK(1);
