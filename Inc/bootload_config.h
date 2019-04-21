@@ -17,7 +17,6 @@ typedef struct
 
 
 #define GOTO_APP                    0x1122aabb  //运行APP
-#define NO_APP                      0xffffffff  //FLASH中没有APP，即出错
 #define COPY_APP                    0x2233ccdd  //需要从下载区拷贝程序到APP区
 
 #define BOOTLOAD_PARAM_ADD          0x08004000

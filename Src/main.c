@@ -25,6 +25,7 @@
 /* USER CODE BEGIN Includes */
 #include "flash_if.h"
 #include "bootload_config.h"
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,6 +47,7 @@ pFunction JumpToApplication;
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
 
@@ -54,6 +56,7 @@ pFunction JumpToApplication;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -61,12 +64,29 @@ static void MX_GPIO_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+int fputc(int ch, FILE *f)
+ {
+		HAL_UART_Transmit(&huart1, (uint8_t *)&ch,1,100);
+		return (ch);
+ }
+
 uint8_t SetParamToFlash(BootLoad_PARAM* bt)
 {
-    flash_if_erase(BOOTLOAD_PARAM_ADD,sizeof(BootLoad_PARAM));
-    flash_if_write(BOOTLOAD_PARAM_ADD, (uint32_t *)bt, sizeof(BootLoad_PARAM));
-
-    return 0;
+	uint8_t res = 0;
+  res = flash_if_erase(BOOTLOAD_PARAM_ADD,sizeof(BootLoad_PARAM));
+	if(res != 0)
+	{
+		res = 1;
+		goto exit_SPTF;
+	}
+  res = flash_if_write(BOOTLOAD_PARAM_ADD, (uint32_t *)bt, sizeof(BootLoad_PARAM));
+	if(res != 0)
+	{
+		res = 2;
+	}
+	
+	exit_SPTF:	
+  return res;
 }
 
 uint8_t GetParamFromFlash(BootLoad_PARAM* bt)
@@ -83,9 +103,9 @@ void Reset_MCU(void)
   while(1);
 }
 
-uint8_t CopyAppHandler(void)
+uint8_t CopyAppHandler(BootLoad_PARAM* bt)
 {
-  //将下载区的程序拷贝到APP区
+  //将下载区的程序拷贝到APP�?
 	return 0;
 }
 
@@ -115,6 +135,7 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
   BootLoad_PARAM BT_PARAM;
+	uint8_t res = 0;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -130,33 +151,55 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
+	
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  
+  printf("STM32F4xx_bootload\r\n");
+	printf("clock is HSI,168M\r\n");
+	
+	printf("Get ParamFromFlash...\r\n");
   GetParamFromFlash(&BT_PARAM);
-
+	
+	printf("The APP_ADDESS is 0x%x.\r\n",BT_PARAM.APP_ADD);
+	printf("The APP_SIZE is 0x%x.\r\n",BT_PARAM.APP_SIZE);
+	printf("The DOWNLOAD_ADDESS is 0x%x.\r\n",BT_PARAM.DOWN_LOAD_ADD);
+	printf("The DOWNLOAD_SIZE is 0x%x.\r\n",BT_PARAM.DOWN_LOAD_SIZE);
+	
   switch (BT_PARAM.Status)
   {
-      case  NO_APP:
-        BT_PARAM.APP_ADD = default_APP_ADD;
-        BT_PARAM.APP_SIZE = default_APP_SIZE;
-        BT_PARAM.DOWN_LOAD_ADD = default_DOWN_LOAD_ADD;
-        BT_PARAM.DOWN_LOAD_SIZE = default_DOWN_LOAD_SIZE;
-        BT_PARAM.Status = GOTO_APP;
-
-        //将参数写入FLASH中，然后重启
-        SetParamToFlash(&BT_PARAM);
-        Reset_MCU();
-        break;
       case GOTO_APP:
+				printf("GO TO APP NOW.\r\n");
         GotoAppHandler(&BT_PARAM);
         break;
       case COPY_APP:
         break;
+			default:
+				printf("bootload is not init.\r\n");
+				printf("set the param to default.\r\n");
+				BT_PARAM.APP_ADD = default_APP_ADD;
+        BT_PARAM.APP_SIZE = default_APP_SIZE;
+        BT_PARAM.DOWN_LOAD_ADD = default_DOWN_LOAD_ADD;
+        BT_PARAM.DOWN_LOAD_SIZE = default_DOWN_LOAD_SIZE;
+        BT_PARAM.Status = GOTO_APP;
+				res = SetParamToFlash(&BT_PARAM);
+				if(res == 1)
+				{
+					printf("SetParam ERROR: flash erase fault.\r\n");
+					while(1);
+				}
+				else if(res == 2)
+				{
+					printf("SetParam ERROR: flash write fault.\r\n");
+					while(1);
+				}
+				printf("SetParam OK\r\n");
+				printf("MCU Reset NOW.");
+				Reset_MCU();
+				break;
   }
 
   /* USER CODE END 2 */
@@ -166,7 +209,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-    
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -187,11 +230,12 @@ void SystemClock_Config(void)
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
   /** Initializes the CPU, AHB and APB busses clocks 
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 4;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = 8;
   RCC_OscInitStruct.PLL.PLLN = 168;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 4;
@@ -212,9 +256,39 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Enables the Clock Security System 
+}
+
+/**
+  * @brief USART1 Initialization Function
+  * @param None
+  * @retval None
   */
-  HAL_RCC_EnableCSS();
+static void MX_USART1_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART1_Init 0 */
+
+  /* USER CODE END USART1_Init 0 */
+
+  /* USER CODE BEGIN USART1_Init 1 */
+
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 115200;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART1_Init 2 */
+
+  /* USER CODE END USART1_Init 2 */
+
 }
 
 /**
@@ -226,7 +300,6 @@ static void MX_GPIO_Init(void)
 {
 
   /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
 
 }
